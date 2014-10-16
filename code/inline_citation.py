@@ -1,4 +1,5 @@
 from bib2json import bib2json
+from gen_references import gen_refs
 import re
 
 def inline_citation(bib_file, input_file, output_file=None):
@@ -6,6 +7,8 @@ def inline_citation(bib_file, input_file, output_file=None):
     Replace all the citation tags from the input
     file with the inline citations in an apa style, 
     write the result in the output_file.
+    Also add the references as a separate section
+    at the end of the output file.
 
     Args
     ----
@@ -76,8 +79,39 @@ def inline_citation(bib_file, input_file, output_file=None):
 
     rslt = ptrn.sub(apa, txt)
     file(output_file, "w").write(rslt)
-    print output_file, input_file
+
+    # adding reference list at the end of the output file.
+    refs = lst2txt(gen_refs(input_file, json_db))
+    add_refs(refs, output_file)
     return None
+
+def add_refs(refs, fl):
+    """
+    Insert references in the file(fl) just before
+    the \end{document}
+    """
+    file_txt = open(fl).read()
+
+    # find the '\end{document}' in the file_txt and
+    # insert references before it
+    ptrn = r"\end{document}"
+    repl = r"\\section{References}" + \
+           '\n'*2 + refs.encode('string-escape') +\
+           '\n' + ptrn
+    if not re.search(ptrn, file_txt):
+        raise Exception("\end{document} missing")
+    file_txt = re.sub(ptrn, repl, file_txt)
+    # modify the file
+    open(fl, "w").write(file_txt)
+    return None
+
+def lst2txt(lst):
+    """
+    >>> lst2txt(['a','b','c'])
+    "a\nb\c"
+    """
+    return reduce(lambda s, t: s + '\n' + t, lst)
+
     
 def out_file_name(in_file_name):
     """construct name of the output file 

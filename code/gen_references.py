@@ -1,34 +1,16 @@
-# def ref_apa(ref):
-#     """
-#     arg: a reference from json_db, of type dict
-#     return: the reference in apa-style, of type str
-#     """
-#     def ifelse(cond, expr1, expr2):
-#         return expr1 if cond else expr2
-#     rslt = "{0} ({1}).".format(author_apa(ref.get('author','')), 
-#                                ref.get('year',''))
-#     ref_type = ref.get('type','')
-#     title = ref.get('title', '')
-#     if ref_type == 'ARTICLE':
-#         vol = ref.get('volume',"")
-#         num = '({0})'.format(ref.get('number')) if ref.get('number') else ''
-#         pg = '{0}'.format(ref.get('pages')) if ref.get('pages') else ''
-#         rslt += " {tit}. \emph{{{jur}}}".format(tit=title, jur=ref.get('journal',''))
-#         if not vol: # may be not published yet
-#             rslt += "."
-#         else:
-#             rslt += ", {vol}{num}".format(vol=vol, num=num) +\
-#                     ifelse(pg, ", {pg}.".format(pg=pg),".")
-#     elif ref_type == 'INPROCEEDINGS':
-#         rslt += "{tit}. \textit{{{book}}} ({pp}).".format(tit=title,
-#                                                         book=ref.get('booktitle',''),
-#                                                         pp=ref.get('pages',''))
-#     elif ref_type == 'BOOK':
-#         rslt += "\textit{{{tit}}}. {pub}.".format(tit=title,
-#                                                 pub=ref.get('publisher',""))
-#     else:
-#         raise Exception("unknown type {0}".format(ref['title']))
-#     return rslt
+import re
+
+def gen_refs(infile, json_db):
+    """
+    infile: tex file 
+    return the list of references in the apa style.
+    """
+    tags = map(lambda s: s.strip().lower(),
+               get_tags(infile)) # remove whitespaces and convert into lower case.
+    refs = map(lambda tag: Ref_apa(json_db[tag]).gen_ref(), 
+               tags)
+    refs.sort(key=lambda s: s.split(",")[0]) # sort according to the first author
+    return refs
 
 class Ref_apa():
     """
@@ -90,7 +72,6 @@ class Ref_apa():
         return rslt
 
     def gen_ref(self):
-        #import pdb; pdb.set_trace()
         if self.tp == 'INPROCEEDINGS':
             return self._proceedings()
         elif self.tp == 'BOOK':
@@ -131,36 +112,9 @@ def get_tags(fl):
     { (?P<tags>[^}]*) } # {tag1,tag2,..}
     """, re.VERBOSE)
     # example pattern: \cite<e.g.>{green1966signal}
-
     tags_lst = ptrn.findall(open(fl).read())
-    # result on example_txt (below) : 
-    # ['Rapoport1970choice,Schotter1981economic,Hey1987still,Kogut1990consumer,Sonnemans1998strategies',
-    #  'Hey1982search',
-    #  'Sonnemans1998strategies',
-    #  'green1966signal']
-    
+    # result on example above : ['green1966signal']
     rslt = set()
     for tags in tags_lst:
         rslt |= set(tags.split(",")) # union
-    
     return list(rslt)
-
-def gen_refs(infile, outfile, json_db):
-    """
-    infile: tex file like example_txt
-    """
-    tags = map(lambda s: s.strip().lower(),
-               get_tags(infile)) # remove whitespaces and convert into lower case.
-    #import pdb; pdb.set_trace()
-    refs = map(lambda tag: Ref_apa(db[tag]).gen_ref(), 
-               tags)
-
-    refs.sort(key=lambda s: s.split(",")[0]) # sort\
-    # according to the first author.
-
-    flp = open(outfile, "w")
-    for ref in refs:
-        flp.write(ref)
-        flp.write("\n"*2)
-    flp.close()
-
