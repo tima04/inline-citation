@@ -81,9 +81,7 @@ def inline_citation(bib_file, input_file, output_file=None):
     file(output_file, "w").write(rslt)
 
     # adding reference list at the end of the output file.
-    refs = latex_line_brk(\
-                          lst2txt(\
-                                  gen_refs(input_file, json_db)))
+    refs = gen_refs(input_file, json_db)
     add_refs(refs, output_file)
     return None
 
@@ -92,41 +90,30 @@ def add_refs(refs, fl):
     Insert references in the file(fl) just before
     the \end{document}
     """
-    file_txt = open(fl).read()
+    lines = open(fl).readlines()
 
     # find the '\end{document}' in the file_txt and
     # insert references before it
     ptrn = r"\end{document}"
     
-    # bug: a backslash before section appears
-    # automaticaly in output file, I don't
-    #know why?
-    repl = "section{References}" + \
-           '\n'*2 + refs.encode('string-escape') +\
-           '\n' + r"\\" + ptrn
-    if not re.search(ptrn, file_txt):
-        raise Exception("\end{document} missing")
-    file_txt = re.sub(ptrn, repl, file_txt)
+    index = index_ptrn(ptrn, lines)
+    if not index:
+        raise ValueError("\end{document} missing")
+
+    lines.insert(index, r"\section{References}")
+    index += 1
+    for ref in refs:
+        lines.insert(index, ref + r"\\" + "\n")
+        index += 1
     # modify the file
-    open(fl, "w").write(file_txt)
+    open(fl, "w").writelines(lines)
     return None
 
-def lst2txt(lst):
-    """
-    >>> lst2txt(['a','b','c'])
-    "a\nb\c"
-    """
-    return reduce(lambda s, t: s + '\n' + t, lst)
+def index_ptrn(ptrn, lst):
+    for i in range(len(lst)):
+        if re.search(ptrn, lst[i]):
+            return i
 
-def latex_line_brk(string):
-    """
-    >>> latex_line_brk("abd\nefg")
-    "abd\n\\efg"
-    """
-    rslt = string.replace("\n", "\\\\ \n")
-    rslt.encode('string-escape')
-    return rslt
-    
 def out_file_name(in_file_name):
     """construct name of the output file 
     from the name of the input file.
@@ -140,3 +127,4 @@ def out_file_name(in_file_name):
         return base + "_output." + extension
     except AttributeError: # no extension
         return in_file_name + "_output"
+
