@@ -95,7 +95,11 @@ def add_refs(refs, fl):
     # find the '\end{document}' in the file_txt and
     # insert references before it
     ptrn = r"\end{document}"
-    repl = r"\\section{References}" + \
+    
+    # bug: a backslash before section appears
+    # automaticaly in output file, I don't
+    #know why?
+    repl = "section{References}" + \
            '\n'*2 + refs.encode('string-escape') +\
            '\n' + ptrn
     if not re.search(ptrn, file_txt):
