@@ -10,5 +10,6 @@
   Download or clone the repository. Suppose foo.bib is the reference file and 
   bar.tex is the latex file, then from the command line:
   python /path-to-main/main.py /path-to-bibtex-file/foo.bib /path-to-texfile/bar.tex
+  
   If everything goes well then a output file bar_output.tex will be generated in
   the same folder as bar.tex.
