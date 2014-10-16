@@ -81,7 +81,9 @@ def inline_citation(bib_file, input_file, output_file=None):
     file(output_file, "w").write(rslt)
 
     # adding reference list at the end of the output file.
-    refs = lst2txt(gen_refs(input_file, json_db))
+    refs = latex_line_brk(\
+                          lst2txt(\
+                                  gen_refs(input_file, json_db)))
     add_refs(refs, output_file)
     return None
 
@@ -101,7 +103,7 @@ def add_refs(refs, fl):
     #know why?
     repl = "section{References}" + \
            '\n'*2 + refs.encode('string-escape') +\
-           '\n' + ptrn
+           '\n' + r"\\" + ptrn
     if not re.search(ptrn, file_txt):
         raise Exception("\end{document} missing")
     file_txt = re.sub(ptrn, repl, file_txt)
@@ -116,6 +118,14 @@ def lst2txt(lst):
     """
     return reduce(lambda s, t: s + '\n' + t, lst)
 
+def latex_line_brk(string):
+    """
+    >>> latex_line_brk("abd\nefg")
+    "abd\n\\efg"
+    """
+    rslt = string.replace("\n", "\\\\ \n")
+    rslt.encode('string-escape')
+    return rslt
     
 def out_file_name(in_file_name):
     """construct name of the output file 
