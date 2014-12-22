@@ -3,11 +3,12 @@ import re
 def gen_refs(infile, json_db):
     """
     infile: tex file 
-    return the list of references in the apa style.
+    return the list of references in the apa style, if any
+    error just return empty list.
     """
     tags = map(lambda s: s.strip().lower(),
                get_tags(infile)) # remove whitespaces and convert into lower case.
-    refs = map(lambda tag: Ref_apa(json_db[tag]).gen_ref(), 
+    refs = map(lambda tag: Ref_apa(json_db.get(tag,{})).gen_ref(), 
                tags)
     refs.sort(key=lambda s: s.split(",")[0]) # sort according to the first author
     return refs
@@ -95,8 +96,11 @@ class Ref_apa():
             else:
                 rslt = 'et al'
             return rslt + '.'
-
-        if len(names) <= 1: return aux(names[0])
+        
+        if not names: # names is []
+            return ""
+            
+        if len(names) == 1: return aux(names[0])
         
         rslt = reduce(lambda n1, n2: n1 + ", " + n2,
                       [aux(n) for n in names[:-1]]) +\

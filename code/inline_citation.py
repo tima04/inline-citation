@@ -17,33 +17,22 @@ def inline_citation(bib_file, input_file, output_file=None):
     output_file: file to be written, if not provided then
                  generate using out_file_name function
     """
-    if not output_file:
-        output_file = out_file_name(input_file)
-    
-    ptrn = re.compile(r"""
-    \\cite(?P<suf> [A]? | year?) # either \cite or \citeA or \citeyear
-    (< (?P<ang>[^>]*) >)? # txt in <>, if <> present
-    { (?P<tags>[^}]*) } # {tag1,tag2,..}
-    """, re.VERBOSE)
-    
-    tags = [] # keep track of tags which has appeared\
-           # if a tag appear again then citation style might\
-           # be different.
-    json_db = bib2json(bib_file)
-    txt = open(input_file).read()
-    
     def apa(match):
-        "helper function used as an argument of the ptrn.sub function, below"
-        tags = match.groupdict()['tags'].split(',')
-        suf = match.groupdict()['suf']
-        ang = match.groupdict()['ang'] ## txt inside <..> if present
-        rslt = reduce(lambda s1, s2: s1 + "; " + s2, 
-                      [apa_helper(t, suf) for t in tags])
-        if ang:
-            rslt = "{0} {1}".format(ang, rslt)
-        if suf == "":
-            rslt = '(' + rslt + ')'
-        return rslt
+        """helper function used as an argument of the ptrn.sub function 
+        (used below)"""
+        try: # if any error then leave the tag as it is.
+            tags = match.groupdict()['tags'].split(',')
+            suf = match.groupdict()['suf']
+            ang = match.groupdict()['ang'] ## txt inside <..> if present
+            rslt = reduce(lambda s1, s2: s1 + "; " + s2, 
+                          [apa_helper(t, suf) for t in tags])
+            if ang:
+                rslt = "{0} {1}".format(ang, rslt)
+            if suf == "":
+                rslt = '(' + rslt + ')'
+            return rslt
+        except:
+            return match.string[match.start(): match.end()]
         
     def apa_helper(tag, suf):
         """ 
@@ -52,7 +41,14 @@ def inline_citation(bib_file, input_file, output_file=None):
         if suf is 'date'(\citedate) then return '(year)'
         if suf is None(\cite) then return 'a_1, a_2,..\& a_n, date'
         """
-        bib = json_db[tag.lower().strip()]
+        try: 
+            bib = json_db[tag.strip()]
+        except KeyError:
+            try:
+                bib = json_db[tag.lower().strip()]
+            except KeyError:
+                pass
+
         names = map(lambda author: author['last'], 
                     bib['author']) # list of last names
         if suf == 'year':
@@ -77,12 +73,28 @@ def inline_citation(bib_file, input_file, output_file=None):
         tags.append(tag)
         return rslt
 
+    if not output_file:
+        output_file = out_file_name(input_file)
+    
+    ptrn = re.compile(r"""
+    \\cite(?P<suf> [A]? | year?) # either \cite or \citeA or \citeyear
+    (< (?P<ang>[^>]*) >)? # txt in <>, if <> present
+    { (?P<tags>[^}]*) } # {tag1,tag2,..}
+    """, re.VERBOSE)
+    
+    tags = [] # keep track of tags which has appeared\
+           # if a tag appear again then citation style might\
+           # be different.
+    json_db = bib2json(bib_file)
+    txt = open(input_file).read()
     rslt = ptrn.sub(apa, txt)
     file(output_file, "w").write(rslt)
 
     # adding reference list at the end of the output file.
     refs = gen_refs(input_file, json_db)
     add_refs(refs, output_file)
+
+
     return None
 
 def add_refs(refs, fl):

@@ -54,9 +54,7 @@ def get_bibitems(bib_file):
     # bibitem begins with @X (X is in the set {AUTHOR, BOOK, INPROCEEDINGS})
     # uses this observation to separate them.
     improbable_str = "&%$" # this is improbable to occur in the text
-    fp = open(bib_file, "r")
-    text = fp.read()
-    fp.close()
+    text = open(bib_file,"U").read()
     return re.sub("\n@", improbable_str + "\n@", 
                   text).split(improbable_str)[1:]
 
@@ -95,22 +93,29 @@ def parse_bibitem(bibitem):
     # get the list [(name_1, value_1),..]
     # and convert it into dictionary
     rxp = re.compile(r"""
-    ^[ ]*(\w+) #lhs starts at a newline, separated by one or more spaces
-    [ ]*[=][ ]* # = is a separator
+    ^[\W]*(\w+) #lhs starts at a newline, separated by one or more non-alphanumeric character (most likely space)
+    [\W]*[=][\W]* # = is a separator
     \{(.*?)\},?$ # rhs starts with '{' and ends with '},' or '}'
     # best is to do the paren match '{' '}', for later
     """,re.VERBOSE|re.MULTILINE|re.DOTALL)
-    rslt = dict(rxp.findall(bibitem))
-    try:
+    rslt = keys2lower(dict(rxp.findall(bibitem))) # Author should become author \
+           # and so on
+    try: 
         rslt['author'] = parse_authors(rslt['author'])
     except KeyError:
-        print 'warning: author missing from the bibitem:\n', bibitem
+        #import pdb; pdb.set_trace()
+        print """Warning: Could not parse author(s) from the following bibitem. Are the
+        first and last name of the author(s) comma separated 
+        for e.g 'Rapoport, Amnon and Tversky, Amos'?\n""", bibitem
         pass
     # get 'type' and 'tag' field from the first line of the
     # bibitem '@X{y,'
-    d = re.match("@(?P<type>\w+)\{(?P<tag>\w+),", bibitem).groupdict()
-    rslt['type'] = d['type']
-    rslt['tag'] = d['tag']
+    try:
+        dict_ = re.match("@(?P<type>\w+)\{(?P<tag>\w+),", bibitem).groupdict()
+    except AttributeError:
+        dict_ = {'type': 'none', 'tag': 'none'}
+    rslt['type'] = dict_.get('type', "").lower()
+    rslt['tag'] = dict_['tag']
     return rslt
 
 def parse_authors(authors):
@@ -128,6 +133,20 @@ def parse_authors(authors):
         except ValueError:
             last, first = author, "" # empty first name
         rslt.append({'first':first, 'last':last})
+    return rslt
+
+def keys2lower(dict_):
+    """For all those keys in dict_ which are string
+    change them to lower case and remove whitespaces from
+    them."""
+    lower = lambda x: x.lower() if type(x) == str else x
+    rslt = {}
+    for key in dict_:
+        if type(key) != str:
+            rslt[key] = dict_[key]
+        else:
+            k = re.sub('\s', "", key.lower())
+            rslt[k] = dict_[key]
     return rslt
 
 ## examples for testing
